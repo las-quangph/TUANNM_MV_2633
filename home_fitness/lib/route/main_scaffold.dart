@@ -61,6 +61,7 @@ class _SleepTabBar extends StatelessWidget {
     _TabItem(icon: AppIcons.icHome, activeIcon: AppIcons.icHomeCheck),
     _TabItem(icon: AppIcons.icWork, activeIcon: AppIcons.icWorkCheck),
     _TabItem(icon: AppIcons.icCycling, activeIcon: AppIcons.icCyclingCheck),
+    _TabItem(icon: AppIcons.icMovies, activeIcon: AppIcons.icMoviesCheck),
     _TabItem(icon: AppIcons.icSetting, activeIcon: AppIcons.icSettingCheck),
   ];
 
@@ -112,12 +113,12 @@ class _TabBarItem extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: context.isPhone ? 40 : 80,
-                height: context.isPhone ? 40 : 80,
+                width: context.isPhone ? 40 : 60,
+                height: context.isPhone ? 40 : 60,
                 child: Center(
                   child: Image.asset(
                     isActive ? tab.activeIcon : tab.icon,
-                    height: context.isPhone ? 40 : 80,
+                    height: context.isPhone ? 40 : 60,
                     fit: BoxFit.fitHeight,
                   ),
                 ),

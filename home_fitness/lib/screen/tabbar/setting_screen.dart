@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../common/app_links.dart';
+import '../../common/ext/device_ext.dart';
 import '../../common/storage/user_profile_storage.dart';
 import '../../route/app_routes.dart';
 import '../../ui_view/profile_header_view.dart';
@@ -141,21 +142,21 @@ class _SettingMenuTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 30,
-              height: 30,
+              width: context.isPhone ? 30 : 50,
+              height: context.isPhone ? 30 : 50,
               decoration: const BoxDecoration(
                 color: Color(0xFF9DDB48),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 18, color: Colors.white),
+              child: Icon(icon, size: context.isPhone ? 18 : 28, color: Colors.white),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: context.isPhone ? 16 : 26,
                   fontWeight: FontWeight.w500,
                 ),
               ),

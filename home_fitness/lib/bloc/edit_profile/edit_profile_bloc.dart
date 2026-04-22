@@ -1,19 +1,42 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../common/storage/user_profile_storage.dart';
+import '../../common/storage/avatar_storage.dart';
+import '../../common/storage/user_profile_storage.dart';
+import 'edit_profile_event.dart';
 import 'edit_profile_state.dart';
 
-class EditProfileCubit extends Cubit<EditProfileState> {
-  EditProfileCubit({
+class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
+  EditProfileBloc({
     ImagePicker? imagePicker,
   })  : _imagePicker = imagePicker ?? ImagePicker(),
-        super(const EditProfileState());
+        super(const EditProfileState()) {
+    on<LoadEditProfile>(_onLoadEditProfile);
+    on<SetEditProfileFullName>((event, emit) {
+      emit(state.copyWith(fullName: event.value, clearErrorMessage: true));
+    });
+    on<SetEditProfileWeightInput>((event, emit) {
+      emit(state.copyWith(weightInput: event.value, clearErrorMessage: true));
+    });
+    on<SetEditProfileHeightInput>((event, emit) {
+      emit(state.copyWith(heightInput: event.value, clearErrorMessage: true));
+    });
+    on<PickEditProfileAvatar>(_onPickEditProfileAvatar);
+    on<SaveEditProfile>(_onSaveEditProfile);
+  }
 
   final ImagePicker _imagePicker;
 
-  Future<void> loadProfile() async {
-    emit(state.copyWith(status: EditProfileStatus.loading, clearErrorMessage: true));
+  Future<void> _onLoadEditProfile(
+    LoadEditProfile event,
+    Emitter<EditProfileState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        status: EditProfileStatus.loading,
+        clearErrorMessage: true,
+      ),
+    );
 
     final profile = await UserProfileStorage.load();
     emit(
@@ -28,33 +51,29 @@ class EditProfileCubit extends Cubit<EditProfileState> {
     );
   }
 
-  void setFullName(String value) {
-    emit(state.copyWith(fullName: value, clearErrorMessage: true));
-  }
-
-  void setWeightInput(String value) {
-    emit(state.copyWith(weightInput: value, clearErrorMessage: true));
-  }
-
-  void setHeightInput(String value) {
-    emit(state.copyWith(heightInput: value, clearErrorMessage: true));
-  }
-
-  Future<void> pickAvatar() async {
+  Future<void> _onPickEditProfileAvatar(
+    PickEditProfileAvatar event,
+    Emitter<EditProfileState> emit,
+  ) async {
     final image = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (image == null) {
       return;
     }
 
+    final persistedAvatarPath = await AvatarStorage.persistAvatar(image.path);
+
     emit(
       state.copyWith(
-        profile: state.profile.copyWith(avatarPath: image.path),
+        profile: state.profile.copyWith(avatarPath: persistedAvatarPath),
         clearErrorMessage: true,
       ),
     );
   }
 
-  Future<void> saveProfile() async {
+  Future<void> _onSaveEditProfile(
+    SaveEditProfile event,
+    Emitter<EditProfileState> emit,
+  ) async {
     final fullName = state.fullName.trim();
     final weight = _parseWeight(state.weightInput);
     final height = _parseHeight(state.heightInput);
@@ -69,7 +88,12 @@ class EditProfileCubit extends Cubit<EditProfileState> {
       return;
     }
 
-    emit(state.copyWith(status: EditProfileStatus.saving, clearErrorMessage: true));
+    emit(
+      state.copyWith(
+        status: EditProfileStatus.saving,
+        clearErrorMessage: true,
+      ),
+    );
 
     final updatedProfile = state.profile.copyWith(
       fullName: fullName,

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../bloc/edit_profile_cubit.dart';
-import '../bloc/edit_profile_state.dart';
+import '../bloc/edit_profile/edit_profile_bloc.dart';
+import '../bloc/edit_profile/edit_profile_event.dart';
+import '../bloc/edit_profile/edit_profile_state.dart';
+import '../common/ext/device_ext.dart';
 import '../ui_view/profile_header_view.dart';
 import '../values/app_colors.dart';
 
@@ -13,7 +15,7 @@ class EditProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => EditProfileCubit()..loadProfile(),
+      create: (_) => EditProfileBloc()..add(const LoadEditProfile()),
       child: const _EditProfileView(),
     );
   }
@@ -41,7 +43,7 @@ class _EditProfileViewState extends State<_EditProfileView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<EditProfileCubit, EditProfileState>(
+    return BlocConsumer<EditProfileBloc, EditProfileState>(
       listenWhen: (previous, current) =>
           previous.status != current.status ||
           previous.fullName != current.fullName ||
@@ -52,9 +54,9 @@ class _EditProfileViewState extends State<_EditProfileView> {
 
         if (state.status == EditProfileStatus.failure &&
             state.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage!)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
         }
 
         if (state.status == EditProfileStatus.saved) {
@@ -62,7 +64,7 @@ class _EditProfileViewState extends State<_EditProfileView> {
         }
       },
       builder: (context, state) {
-        final cubit = context.read<EditProfileCubit>();
+        final bloc = context.read<EditProfileBloc>();
 
         return Scaffold(
           backgroundColor: AppColors.bgColor,
@@ -70,10 +72,13 @@ class _EditProfileViewState extends State<_EditProfileView> {
             onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
             behavior: HitTestBehavior.translucent,
             child: SafeArea(
-              child: state.status == EditProfileStatus.loading ||
+              child:
+                  state.status == EditProfileStatus.loading ||
                       state.status == EditProfileStatus.initial
                   ? const Center(
-                      child: CircularProgressIndicator(color: Color(0xFFE8FF54)),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFE8FF54),
+                      ),
                     )
                   : LayoutBuilder(
                       builder: (context, constraints) {
@@ -88,11 +93,17 @@ class _EditProfileViewState extends State<_EditProfileView> {
                             child: Column(
                               children: [
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    12,
+                                    16,
+                                    28,
+                                  ),
                                   child: Align(
                                     alignment: Alignment.centerLeft,
                                     child: IconButton(
-                                      onPressed: () => Navigator.of(context).pop(),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
                                       icon: const Icon(
                                         Icons.arrow_back_ios_new_rounded,
                                         color: Color(0xFFE8FF54),
@@ -108,9 +119,15 @@ class _EditProfileViewState extends State<_EditProfileView> {
                                         : state.fullName.trim(),
                                   ),
                                   avatarPath: state.avatarPath,
-                                  onEditAvatar: cubit.pickAvatar,
-                                  headerPadding:
-                                      const EdgeInsets.fromLTRB(24, 24, 24, 48),
+                                  onEditAvatar: () {
+                                    bloc.add(const PickEditProfileAvatar());
+                                  },
+                                  headerPadding: const EdgeInsets.fromLTRB(
+                                    24,
+                                    24,
+                                    24,
+                                    48,
+                                  ),
                                   statsHorizontalPadding: 18,
                                   statsVerticalPadding: 12,
                                   statsLeft: 24,
@@ -119,14 +136,24 @@ class _EditProfileViewState extends State<_EditProfileView> {
                                   showBottomSpacer: false,
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(24, 48, 24, 0),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    24,
+                                    48,
+                                    24,
+                                    0,
+                                  ),
                                   child: Column(
                                     children: [
-                                  _InputField(
-                                    label: 'Username',
-                                    controller: _fullNameController,
-                                    keyboardType: TextInputType.name,
-                                    onChanged: cubit.setFullName,
+                                      SizedBox(height: 20),
+                                      _InputField(
+                                        label: 'Username',
+                                        controller: _fullNameController,
+                                        keyboardType: TextInputType.name,
+                                        onChanged: (value) {
+                                          bloc.add(
+                                            SetEditProfileFullName(value),
+                                          );
+                                        },
                                       ),
                                       const SizedBox(height: 18),
                                       _InputField(
@@ -134,15 +161,19 @@ class _EditProfileViewState extends State<_EditProfileView> {
                                         controller: _weightController,
                                         keyboardType:
                                             const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                        ),
+                                              decimal: true,
+                                            ),
                                         suffixText: 'Kg',
                                         inputFormatters: [
                                           FilteringTextInputFormatter.allow(
                                             RegExp(r'[0-9.]'),
                                           ),
                                         ],
-                                        onChanged: cubit.setWeightInput,
+                                        onChanged: (value) {
+                                          bloc.add(
+                                            SetEditProfileWeightInput(value),
+                                          );
+                                        },
                                       ),
                                       const SizedBox(height: 18),
                                       _InputField(
@@ -150,32 +181,42 @@ class _EditProfileViewState extends State<_EditProfileView> {
                                         controller: _heightController,
                                         keyboardType:
                                             const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                        ),
+                                              decimal: true,
+                                            ),
                                         suffixText: 'CM',
                                         inputFormatters: [
                                           FilteringTextInputFormatter.allow(
                                             RegExp(r'[0-9.]'),
                                           ),
                                         ],
-                                        onChanged: cubit.setHeightInput,
+                                        onChanged: (value) {
+                                          bloc.add(
+                                            SetEditProfileHeightInput(value),
+                                          );
+                                        },
                                       ),
                                       const SizedBox(height: 26),
                                       SizedBox(
-                                        width: 180,
-                                        height: 50,
+                                        width: context.isPhone ? 180 : 250,
+                                        height: context.isPhone ? 50 : 80,
                                         child: ElevatedButton(
-                                          onPressed: state.status ==
+                                          onPressed:
+                                              state.status ==
                                                   EditProfileStatus.saving
                                               ? null
                                               : () {
-                                                  FocusManager.instance.primaryFocus
+                                                  FocusManager
+                                                      .instance
+                                                      .primaryFocus
                                                       ?.unfocus();
-                                                  cubit.saveProfile();
+                                                  bloc.add(
+                                                    const SaveEditProfile(),
+                                                  );
                                                 },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                const Color(0xFFE8FF54),
+                                            backgroundColor: const Color(
+                                              0xFFE8FF54,
+                                            ),
                                             foregroundColor: Colors.black,
                                             elevation: 0,
                                             shape: RoundedRectangleBorder(
@@ -188,8 +229,8 @@ class _EditProfileViewState extends State<_EditProfileView> {
                                                     EditProfileStatus.saving
                                                 ? 'Saving...'
                                                 : 'Update Profile',
-                                            style: const TextStyle(
-                                              fontSize: 15,
+                                            style: TextStyle(
+                                              fontSize: context.isPhone ? 15 : 25,
                                               fontWeight: FontWeight.w800,
                                             ),
                                           ),
@@ -254,9 +295,9 @@ class _InputField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: Color(0xFF9DDB48),
-            fontSize: 16,
+            fontSize: context.isPhone ? 16 : 26,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -268,9 +309,9 @@ class _InputField extends StatelessWidget {
           onChanged: onChanged,
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           scrollPadding: const EdgeInsets.only(bottom: 20),
-          style: const TextStyle(
+          style: TextStyle(
             color: Color(0xFF303030),
-            fontSize: 15,
+            fontSize: context.isPhone ? 15 : 25,
             fontWeight: FontWeight.w600,
           ),
           decoration: InputDecoration(
@@ -278,9 +319,9 @@ class _InputField extends StatelessWidget {
             fillColor: Colors.white,
             isDense: true,
             suffixText: suffixText,
-            suffixStyle: const TextStyle(
+            suffixStyle: TextStyle(
               color: Color(0xFF303030),
-              fontSize: 15,
+              fontSize: context.isPhone ? 15 : 25,
               fontWeight: FontWeight.w700,
             ),
             contentPadding: const EdgeInsets.symmetric(

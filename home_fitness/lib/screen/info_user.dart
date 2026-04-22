@@ -2,10 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../bloc/info_user_state.dart';
+import 'package:home_fitness/common/ext/device_ext.dart';
+import '../bloc/info_user/info_user_bloc.dart';
+import '../bloc/info_user/info_user_event.dart';
+import '../bloc/info_user/info_user_state.dart';
 import '../route/app_routes.dart';
 import '../values/app_assets.dart';
-import '../bloc/info_user_cubit.dart';
 
 const _infoUserAccentColor = Color(0xFFE7FF57);
 const _infoUserMinHeight = 120;
@@ -17,7 +19,7 @@ class InfoUser extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => InfoUserCubit(),
+      create: (_) => InfoUserBloc(),
       child: const _InfoUserView(),
     );
   }
@@ -59,7 +61,7 @@ class _InfoUserViewState extends State<_InfoUserView> {
   @override
   void initState() {
     super.initState();
-    final state = context.read<InfoUserCubit>().state;
+    final state = context.read<InfoUserBloc>().state;
     _ageController = PageController(
       initialPage: state.age - 1,
       viewportFraction: 0.2,
@@ -86,7 +88,7 @@ class _InfoUserViewState extends State<_InfoUserView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<InfoUserCubit, InfoUserState>(
+    return BlocConsumer<InfoUserBloc, InfoUserState>(
       listenWhen: (previous, current) => previous.status != current.status,
       listener: (context, state) {
         if (state.status == InfoUserStatus.saved) {
@@ -103,7 +105,11 @@ class _InfoUserViewState extends State<_InfoUserView> {
                   child: PageView(
                     controller: _pageController,
                     physics: const NeverScrollableScrollPhysics(),
-                    onPageChanged: context.read<InfoUserCubit>().setPageIndex,
+                    onPageChanged: (index) {
+                      context.read<InfoUserBloc>().add(
+                        SetInfoUserPageIndex(index),
+                      );
+                    },
                     children: [
                       _buildGenderPage(state),
                       _buildAgePage(state),
@@ -134,14 +140,18 @@ class _InfoUserViewState extends State<_InfoUserView> {
             label: 'Male',
             iconAsset: AppIcons.icMale,
             selected: state.gender == InfoUserGender.male,
-            onTap: () => context.read<InfoUserCubit>().selectGender(InfoUserGender.male),
+            onTap: () => context.read<InfoUserBloc>().add(
+              const SelectInfoUserGender(InfoUserGender.male),
+            ),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: context.isPhone ? 18 : 30),
           _GenderOption(
             label: 'Female',
             iconAsset: AppIcons.icFemale,
             selected: state.gender == InfoUserGender.female,
-            onTap: () => context.read<InfoUserCubit>().selectGender(InfoUserGender.female),
+            onTap: () => context.read<InfoUserBloc>().add(
+              const SelectInfoUserGender(InfoUserGender.female),
+            ),
           ),
         ],
       ),
@@ -199,8 +209,9 @@ class _InfoUserViewState extends State<_InfoUserView> {
                 PageView.builder(
                   controller: _ageController,
                   itemCount: 100,
-                  onPageChanged: (index) =>
-                      context.read<InfoUserCubit>().setAge(index + 1),
+                  onPageChanged: (index) => context.read<InfoUserBloc>().add(
+                        SetInfoUserAge(index + 1),
+                      ),
                   itemBuilder: (context, index) {
                     final value = index + 1;
                     final selected = value == state.age;
@@ -209,7 +220,7 @@ class _InfoUserViewState extends State<_InfoUserView> {
                         '$value',
                         style: TextStyle(
                           color: selected ? Colors.black : const Color(0xFF8A8A8A),
-                          fontSize: selected ? 22 : 18,
+                          fontSize: selected ? (context.isPhone ? 22 : 32) : (context.isPhone ? 18 : 28),
                           fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
                         ),
                       ),
@@ -233,12 +244,13 @@ class _InfoUserViewState extends State<_InfoUserView> {
         children: [
           const SizedBox(height: 8),
           SizedBox(
-            height: 40,
+            height: context.isPhone ? 40 : 80,
             child: PageView.builder(
               controller: _weightController,
               itemCount: 151,
-              onPageChanged: (index) =>
-                  context.read<InfoUserCubit>().setWeight(index + 1),
+              onPageChanged: (index) => context.read<InfoUserBloc>().add(
+                    SetInfoUserWeight(index + 1),
+                  ),
               itemBuilder: (context, index) {
                 final value = index + 1;
                 final selected = value == state.weight;
@@ -247,7 +259,7 @@ class _InfoUserViewState extends State<_InfoUserView> {
                     '$value',
                     style: TextStyle(
                       color: selected ? Colors.white : const Color(0xFF8A8A8A),
-                      fontSize: selected ? 20 : 18,
+                      fontSize: selected ? (context.isPhone ? 20 : 30) : (context.isPhone ? 18 : 28),
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -258,7 +270,7 @@ class _InfoUserViewState extends State<_InfoUserView> {
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            height: 78,
+            height: context.isPhone ? 78 : 140,
             child: Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.topCenter,
@@ -269,16 +281,16 @@ class _InfoUserViewState extends State<_InfoUserView> {
                   right: 0,
                   child: Image.asset(
                     AppIcons.icRule1,
-                    height: 50,
+                    height: context.isPhone ? 50 : 100,
                     fit: BoxFit.fill,
                   ),
                 ),
                 Positioned(
-                  top: 58,
+                  top: context.isPhone ? 58 : 110,
                   child: Image.asset(
                     AppIcons.icPolygon,
-                    width: 28,
-                    height: 20,
+                    width: context.isPhone ? 28 : 40,
+                    height: context.isPhone ? 20 : 40,
                     color: _accentColor,
                   ),
                 ),
@@ -291,17 +303,17 @@ class _InfoUserViewState extends State<_InfoUserView> {
               children: [
                 TextSpan(
                   text: '${state.weight}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 52,
+                    fontSize: context.isPhone ? 52 : 62,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const TextSpan(
+                TextSpan(
                   text: ' Kg',
                   style: TextStyle(
                     color: Color(0xFFA1A1A1),
-                    fontSize: 20,
+                    fontSize: context.isPhone ? 20 : 30,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -361,8 +373,8 @@ class _InfoUserViewState extends State<_InfoUserView> {
                       overAndUnderCenterOpacity: 0.7,
                       perspective: 0.001,
                       onSelectedItemChanged: (index) => context
-                          .read<InfoUserCubit>()
-                          .setHeight(_maxHeight - index),
+                          .read<InfoUserBloc>()
+                          .add(SetInfoUserHeight(_maxHeight - index)),
                       childDelegate: ListWheelChildBuilderDelegate(
                         childCount: _maxHeight - _minHeight + 1,
                         builder: (context, index) {
@@ -421,7 +433,9 @@ class _InfoUserViewState extends State<_InfoUserView> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: InkWell(
-                    onTap: () => context.read<InfoUserCubit>().setGoal(goal),
+                    onTap: () => context.read<InfoUserBloc>().add(
+                      SetInfoUserGoal(goal),
+                    ),
                     borderRadius: BorderRadius.circular(22),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -434,15 +448,16 @@ class _InfoUserViewState extends State<_InfoUserView> {
                           Expanded(
                             child: Text(
                               goal,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.black87,
                                 fontWeight: FontWeight.w600,
+                                fontSize: context.isPhone ? 15 : 25
                               ),
                             ),
                           ),
                           Container(
-                            width: 26,
-                            height: 26,
+                            width: context.isPhone ? 26 : 36,
+                            height: context.isPhone ? 26 : 36,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.black54, width: 2),
@@ -478,14 +493,16 @@ class _InfoUserViewState extends State<_InfoUserView> {
       child: Column(
         children: [
           InkWell(
-            onTap: () => context.read<InfoUserCubit>().pickProfileImage(),
+            onTap: () => context.read<InfoUserBloc>().add(
+              const PickInfoUserProfileImage(),
+            ),
             borderRadius: BorderRadius.circular(80),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  width: 140,
-                  height: 140,
+                  width: context.isPhone ? 140 : 240,
+                  height: context.isPhone ? 140 : 240,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: profileImage == null
@@ -519,8 +536,8 @@ class _InfoUserViewState extends State<_InfoUserView> {
                   right: 0,
                   bottom: 12,
                   child: Container(
-                    width: 36,
-                    height: 36,
+                    width: context.isPhone ? 36 : 60,
+                    height: context.isPhone ? 36 : 60,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(
                       color: _accentColor,
@@ -528,8 +545,8 @@ class _InfoUserViewState extends State<_InfoUserView> {
                     ),
                     child: Image.asset(
                       AppIcons.icEdit,
-                      width: 30,
-                      height: 30,
+                      width: context.isPhone ? 30 : 40,
+                      height: context.isPhone ? 30 : 40,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -541,13 +558,17 @@ class _InfoUserViewState extends State<_InfoUserView> {
           _InputField(
             label: 'Full name',
             controller: _fullNameController,
-            onChanged: context.read<InfoUserCubit>().setFullName,
+            onChanged: (value) => context.read<InfoUserBloc>().add(
+              SetInfoUserFullName(value),
+            ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: context.isPhone ? 12 : 30),
           _InputField(
             label: 'Nickname',
             controller: _nickNameController,
-            onChanged: context.read<InfoUserCubit>().setNickName,
+            onChanged: (value) => context.read<InfoUserBloc>().add(
+              SetInfoUserNickName(value),
+            ),
           ),
           const SizedBox(height: 24),
 
@@ -562,8 +583,8 @@ class _InfoUserViewState extends State<_InfoUserView> {
     bool highlighted = false,
   }) {
     return SizedBox(
-      width: 126,
-      height: 42,
+      width: context.isPhone ? 126 : 250,
+      height: context.isPhone ? 42 : 70,
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
@@ -580,7 +601,7 @@ class _InfoUserViewState extends State<_InfoUserView> {
           style: TextStyle(
             color: highlighted ? Colors.black : Colors.white,
             fontWeight: FontWeight.w800,
-            fontSize: 14,
+            fontSize: context.isPhone ? 14 : 24,
           ),
         ),
       ),
@@ -588,7 +609,7 @@ class _InfoUserViewState extends State<_InfoUserView> {
   }
 
   void _goToNext() {
-    if (context.read<InfoUserCubit>().state.pageIndex == 5) {
+    if (context.read<InfoUserBloc>().state.pageIndex == 5) {
       _goToHome();
       return;
     }
@@ -600,7 +621,7 @@ class _InfoUserViewState extends State<_InfoUserView> {
   }
 
   void _goToPrevious() {
-    if (context.read<InfoUserCubit>().state.pageIndex == 0) {
+    if (context.read<InfoUserBloc>().state.pageIndex == 0) {
       return;
     }
 
@@ -611,7 +632,7 @@ class _InfoUserViewState extends State<_InfoUserView> {
   }
 
   Future<void> _goToHome() async {
-    await context.read<InfoUserCubit>().saveProfile();
+    context.read<InfoUserBloc>().add(const SaveInfoUserProfile());
   }
 }
 
@@ -654,9 +675,9 @@ class _FlowScaffold extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: context.isPhone ? 32 : 42,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -690,8 +711,8 @@ class _GenderOption extends StatelessWidget {
         children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          width: 160,
-          height: 160,
+          width: context.isPhone ? 160 : 260,
+          height: context.isPhone ? 160 : 260,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
@@ -702,18 +723,18 @@ class _GenderOption extends StatelessWidget {
           ),
           child: Image.asset(
             iconAsset,
-            width: 80,
-              height: 80,
+            width: context.isPhone ? 80 : 120,
+              height: context.isPhone ? 80 : 120,
               color: selected ? const Color(0xFFE2F163) : Colors.white,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: context.isPhone ? 10 : 20),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
-              fontSize: 18,
+              fontSize: context.isPhone ? 18 : 28,
             ),
           ),
         ],
@@ -740,19 +761,19 @@ class _InputField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: Color(0xFF8F64FF),
             fontWeight: FontWeight.w600,
-            fontSize: 16,
+            fontSize: context.isPhone ? 16 : 26,
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: context.isPhone ? 10 : 20),
         TextField(
           controller: controller,
           onChanged: onChanged,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.black,
-            fontSize: 20,
+            fontSize: context.isPhone ? 20 : 30,
             fontWeight: FontWeight.w600,
           ),
           decoration: InputDecoration(

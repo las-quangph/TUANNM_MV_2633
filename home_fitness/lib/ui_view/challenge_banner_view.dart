@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../common/ext/device_ext.dart';
+
 class ChallengeBannerView extends StatelessWidget {
   const ChallengeBannerView({
     super.key,
@@ -30,9 +32,9 @@ class ChallengeBannerView extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.black,
-                  fontSize: 20,
+                  fontSize: context.isPhone ? 20 : 30,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -40,9 +42,9 @@ class ChallengeBannerView extends StatelessWidget {
               Text(
                 description,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFF4E4E4E),
-                  fontSize: 14,
+                  fontSize: context.isPhone ? 14 : 24,
                   fontWeight: FontWeight.w500,
                   height: 1.2,
                 ),
@@ -52,8 +54,8 @@ class ChallengeBannerView extends StatelessWidget {
         ),
         const SizedBox(height: 30),
         SizedBox(
-          width: 230,
-          height: 42,
+          width: context.isPhone ? 230 : 300,
+          height: context.isPhone ? 42 : 60,
           child: OutlinedButton(
             onPressed: onPressed,
             style: OutlinedButton.styleFrom(
@@ -69,8 +71,8 @@ class ChallengeBannerView extends StatelessWidget {
             ),
             child: Text(
               buttonLabel,
-              style: const TextStyle(
-                fontSize: 16,
+              style: TextStyle(
+                fontSize: context.isPhone ? 16 : 26,
                 fontWeight: FontWeight.w700,
               ),
             ),

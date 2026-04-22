@@ -1,12 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
+import 'package:home_fitness/screen/cycling_detail_screen.dart';
 import 'package:home_fitness/screen/info_user.dart';
+import 'package:home_fitness/screen/movie_detail_screen.dart';
 import 'package:home_fitness/screen/tabbar/cycling_screen.dart';
 import 'package:home_fitness/screen/edit_profile_screen.dart';
 import 'package:home_fitness/screen/exercise_detail_screen.dart';
+import 'package:home_fitness/screen/tabbar/movies_screen.dart';
 import 'package:home_fitness/screen/tabbar/setting_screen.dart';
 import 'package:home_fitness/screen/workout_detail_screen.dart';
 import 'package:home_fitness/screen/tabbar/workout_screen.dart';
+import '../model/movie_item.dart';
 import '../model/workout_models.dart';
 import '../screen/tabbar/home_screen.dart';
 import 'app_routes.dart';
@@ -39,12 +43,19 @@ GoRouter createAppRouter({
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,
+        path: AppRoutes.cyclingDetail,
+        builder: (context, state) => const CyclingDetailScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
         path: AppRoutes.workoutExercise,
         builder: (context, state) {
           final extra = state.extra;
           if (extra is ExerciseDetailArgs) {
             return ExerciseDetailScreen(
               exercise: extra.exercise,
+              exerciseSequence: extra.exerciseSequence,
+              finishRoute: extra.finishRoute,
               initialElapsedSeconds: extra.elapsedSeconds,
               initialCompletedExercises: extra.completedExercises,
             );
@@ -52,6 +63,14 @@ GoRouter createAppRouter({
 
           final exercise = extra as WorkoutExercise;
           return ExerciseDetailScreen(exercise: exercise);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: AppRoutes.movieDetail,
+        builder: (context, state) {
+          final movie = state.extra as MovieItem;
+          return MovieDetailScreen(movie: movie);
         },
       ),
       StatefulShellRoute.indexedStack(
@@ -82,6 +101,15 @@ GoRouter createAppRouter({
               GoRoute(
                 path: AppRoutes.cycling,
                 builder: (context, state) => const CyclingScreen(),
+              ),
+            ],
+          ),
+
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.movies,
+                builder: (context, state) => const MoviesScreen(),
               ),
             ],
           ),

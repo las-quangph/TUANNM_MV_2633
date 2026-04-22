@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../common/ext/device_ext.dart';
 import '../common/storage/user_profile_storage.dart';
 
 class ProfileHeaderView extends StatelessWidget {
@@ -11,7 +12,7 @@ class ProfileHeaderView extends StatelessWidget {
     this.avatarPath,
     this.onEditAvatar,
     this.avatarSize = 140,
-    this.titleFontSize = 22,
+    this.titleFontSize = 30,
     this.headerPadding = const EdgeInsets.fromLTRB(24, 26, 24, 48),
     this.statsHorizontalPadding = 18,
     this.statsVerticalPadding = 14,
@@ -74,9 +75,9 @@ class ProfileHeaderView extends StatelessWidget {
               Text(
                 profile.displayName,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.black,
-                  fontSize: 18,
+                  fontSize: context.isPhone ? 18 : 28,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -85,7 +86,7 @@ class ProfileHeaderView extends StatelessWidget {
           ),
         ),
         Positioned(
-          bottom: statsBottom,
+          bottom: context.isPhone ? - 25 : -50,
           left: statsLeft,
           right: statsRight,
           child: Container(
@@ -170,9 +171,9 @@ class _ProfileAvatar extends StatelessWidget {
           ? null
           : Text(
               profile.initials,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 28,
+                fontSize: context.isPhone ? 28 : 38,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -193,8 +194,8 @@ class _ProfileAvatar extends StatelessWidget {
             right: -2,
             bottom: 6,
             child: Container(
-              width: 24,
-              height: 24,
+              width: 40,
+              height: 40,
               alignment: Alignment.center,
               decoration: const BoxDecoration(
                 color: Color(0xFFE8FF54),
@@ -202,7 +203,7 @@ class _ProfileAvatar extends StatelessWidget {
               ),
               child: const Icon(
                 Icons.edit,
-                size: 16,
+                size: 25,
                 color: Colors.black,
               ),
             ),
@@ -229,18 +230,18 @@ class _ProfileStat extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 15,
+            fontSize: context.isPhone ? 15 : 25,
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 13,
+            fontSize: context.isPhone ? 13 : 23,
             fontWeight: FontWeight.w400,
           ),
         ),

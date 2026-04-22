@@ -22,4 +22,6 @@ class AppIcons {
   static const String icSettingCheck = '${iconPath}ic_setting_check.png';
   static const String icWork = '${iconPath}ic_work.png';
   static const String icWorkCheck = '${iconPath}ic_work_check.png';
+  static const String icMovies = '${iconPath}ic_movies.png';
+  static const String icMoviesCheck = '${iconPath}ic_movies_check.png';
 }

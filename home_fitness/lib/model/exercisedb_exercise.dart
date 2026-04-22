@@ -117,25 +117,4 @@ class ExerciseDbExercise {
     }
     return value.map((item) => item.toString()).toList(growable: false);
   }
-
-  static String? _resolveMediaUrl(
-    String? raw, {
-    String? mediaBaseUrl,
-  }) {
-    if (raw == null || raw.isEmpty) {
-      return null;
-    }
-    final uri = Uri.tryParse(raw);
-    if (uri != null && uri.hasScheme) {
-      return raw;
-    }
-    if (mediaBaseUrl == null || mediaBaseUrl.isEmpty) {
-      return null;
-    }
-    final base = mediaBaseUrl.endsWith('/')
-        ? mediaBaseUrl.substring(0, mediaBaseUrl.length - 1)
-        : mediaBaseUrl;
-    final path = raw.startsWith('/') ? raw.substring(1) : raw;
-    return '$base/$path';
-  }
 }

@@ -1,4 +1,4 @@
-import '../common/storage/user_profile_storage.dart';
+import '../../common/storage/user_profile_storage.dart';
 
 enum EditProfileStatus {
   initial,

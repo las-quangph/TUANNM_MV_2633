@@ -6,7 +6,9 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../bloc/home/workout_activity/workout_activity_bloc.dart';
 import '../../bloc/home/workout_activity/workout_activity_state.dart';
+import '../../common/ext/device_ext.dart';
 import '../../common/storage/user_profile_storage.dart';
+import '../../model/workout_models.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -81,7 +83,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                     });
                                   },
                                 )
-                              : const _ChartView(key: ValueKey('chart')),
+                              : _ChartView(
+                                  key: const ValueKey('chart'),
+                                  selectedDay: _selectedDay,
+                                ),
                         ),
                       ),
                     ],
@@ -128,9 +133,9 @@ class _ProfileSummaryCard extends StatelessWidget {
               children: [
                 Text(
                   profile.nickName.isEmpty ? profile.fullName : profile.nickName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.black,
-                    fontSize: 19,
+                    fontSize: context.isPhone ? 19 : 29,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -146,8 +151,8 @@ class _ProfileSummaryCard extends StatelessWidget {
             ),
           ),
           Container(
-            width: 125,
-            height: 125,
+            width: context.isPhone ? 125 : 200,
+            height: context.isPhone ? 125 : 200,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: avatarExists
@@ -197,8 +202,8 @@ class _MetricPill extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 6,
-          height: 32,
+          width: context.isPhone ? 6 : 10,
+          height: context.isPhone ? 32 : 60,
           decoration: BoxDecoration(
             color: Colors.black,
             borderRadius: BorderRadius.circular(999),
@@ -210,18 +215,18 @@ class _MetricPill extends StatelessWidget {
           children: [
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.w800,
-                fontSize: 14,
+                fontSize: context.isPhone ? 14 : 24,
               ),
             ),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.black87,
                 fontWeight: FontWeight.w500,
-                fontSize: 13,
+                fontSize: context.isPhone ? 13 : 23,
               ),
             ),
           ],
@@ -282,7 +287,7 @@ class _TabChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        height: 42,
+        height: context.isPhone ? 42 : 60,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFE7FF57) : Colors.white,
@@ -293,7 +298,7 @@ class _TabChip extends StatelessWidget {
           style: TextStyle(
             color: selected ? Colors.black : const Color(0xFF7B8EEB),
             fontWeight: FontWeight.w600,
-            fontSize: 18,
+            fontSize: context.isPhone ? 18 : 28,
           ),
         ),
       ),
@@ -333,11 +338,11 @@ class _WorkoutLogView extends StatelessWidget {
               onDaySelected: onDaySelected,
             ),
             const SizedBox(height: 22),
-            const Text(
+            Text(
               'Activities',
               style: TextStyle(
                 color: Color(0xFFE7FF57),
-                fontSize: 20,
+                fontSize: context.isPhone ? 20 : 30,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -414,36 +419,115 @@ class _WorkoutLogView extends StatelessWidget {
 }
 
 class _ChartView extends StatelessWidget {
-  const _ChartView({super.key});
+  const _ChartView({
+    super.key,
+    required this.selectedDay,
+  });
+
+  final DateTime? selectedDay;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: const [
-        Text(
-          'My Progress',
-          style: TextStyle(
-            color: Color(0xFFE7FF57),
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        SizedBox(height: 6),
-        Text(
-          'January 12th',
-          style: TextStyle(
-            color: Color(0xFFE7FF57),
-            fontSize: 30,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        SizedBox(height: 14),
-        _ChartCard(),
-        SizedBox(height: 16),
-        _SummaryStrip(),
-      ],
+    return BlocBuilder<WorkoutActivityBloc, WorkoutActivityState>(
+      builder: (context, state) {
+        final anchorDay = selectedDay ?? DateTime.now();
+        final chartPoints = _buildWeeklyChartPoints(
+          activities: state.activities,
+          anchorDay: anchorDay,
+        );
+        final daySummary = _buildDaySummary(
+          activities: state.activities,
+          selectedDay: anchorDay,
+        );
+
+        return ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            Text(
+              'My Progress',
+              style: TextStyle(
+                color: Color(0xFFE7FF57),
+                fontSize: context.isPhone ? 18 : 28,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _formatChartHeader(anchorDay),
+              style: TextStyle(
+                color: Color(0xFFE7FF57),
+                fontSize: context.isPhone ? 30 : 40,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 14),
+            _ChartCard(points: chartPoints),
+            const SizedBox(height: 16),
+            _SummaryStrip(summary: daySummary),
+          ],
+        );
+      },
     );
+  }
+
+  static List<_DailyKcalPoint> _buildWeeklyChartPoints({
+    required List<CompletedExerciseRecord> activities,
+    required DateTime anchorDay,
+  }) {
+    final normalizedAnchor = DateTime(anchorDay.year, anchorDay.month, anchorDay.day);
+    return List.generate(7, (index) {
+      final day = normalizedAnchor.subtract(Duration(days: 6 - index));
+      final kcal = activities
+          .where((activity) => isSameDay(activity.completedAt, day))
+          .fold<int>(0, (sum, item) => sum + item.kcalBurned);
+      return _DailyKcalPoint(
+        date: day,
+        kcal: kcal,
+      );
+    });
+  }
+
+  static _DaySummary _buildDaySummary({
+    required List<CompletedExerciseRecord> activities,
+    required DateTime selectedDay,
+  }) {
+    final dayActivities = activities
+        .where((activity) => isSameDay(activity.completedAt, selectedDay))
+        .toList(growable: false);
+    final totalKcal =
+        dayActivities.fold<int>(0, (sum, item) => sum + item.kcalBurned);
+    final totalDuration = dayActivities.fold<int>(
+      0,
+      (sum, item) => sum + item.durationSeconds,
+    );
+    return _DaySummary(
+      weekday: _weekdayLabel(selectedDay),
+      totalKcal: totalKcal,
+      totalDurationSeconds: totalDuration,
+    );
+  }
+
+  static String _formatChartHeader(DateTime date) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return '${monthNames[date.month - 1]} ${date.day}th';
+  }
+
+  static String _weekdayLabel(DateTime date) {
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return labels[date.weekday - 1];
   }
 }
 
@@ -470,74 +554,96 @@ class _CalendarCard extends StatelessWidget {
         firstDay: DateTime.utc(2020, 1, 1),
         lastDay: DateTime.utc(2035, 12, 31),
         focusedDay: focusedDay,
-        headerStyle: const HeaderStyle(
+        daysOfWeekHeight: context.isPhone ? 16 : 36,
+        headerStyle: HeaderStyle(
           titleCentered: true,
           formatButtonVisible: false,
-          leftChevronIcon: Icon(
+          headerPadding: EdgeInsets.symmetric(
+            vertical: context.isPhone ? 6 : 12,
+          ),
+          titleTextFormatter: (date, locale) {
+            const monthNames = [
+              'January',
+              'February',
+              'March',
+              'April',
+              'May',
+              'June',
+              'July',
+              'August',
+              'September',
+              'October',
+              'November',
+              'December',
+            ];
+            return '${monthNames[date.month - 1]} ${date.year}';
+          },
+          leftChevronIcon: const Icon(
             Icons.chevron_left_rounded,
             color: Color(0xFF2C2C2C),
           ),
-          rightChevronIcon: Icon(
+          rightChevronIcon: const Icon(
             Icons.chevron_right_rounded,
             color: Color(0xFF2C2C2C),
           ),
           titleTextStyle: TextStyle(
-            color: Color(0xFF2C2C2C),
-            fontSize: 16,
+            color: const Color(0xFF2C2C2C),
+            fontSize: context.isPhone ? 16 : 26,
             fontWeight: FontWeight.w800,
+            height: 1.2,
           ),
         ),
-        daysOfWeekStyle: const DaysOfWeekStyle(
+        daysOfWeekStyle: DaysOfWeekStyle(
           weekdayStyle: TextStyle(
             color: Color(0xFF5C7CF6),
             fontWeight: FontWeight.w700,
-            fontSize: 11,
+            fontSize: context.isPhone ? 11 : 21,
           ),
           weekendStyle: TextStyle(
             color: Color(0xFF2C2C2C),
             fontWeight: FontWeight.w700,
-            fontSize: 11,
+            fontSize: context.isPhone ? 11 : 21,
           ),
         ),
-        rowHeight: 34,
+        rowHeight: context.isPhone ? 34 : 50,
         availableGestures: AvailableGestures.horizontalSwipe,
         calendarFormat: CalendarFormat.month,
         selectedDayPredicate: (day) => isSameDay(selectedDay, day),
         onDaySelected: onDaySelected,
         calendarStyle: CalendarStyle(
           outsideDaysVisible: true,
-          defaultTextStyle: const TextStyle(
+          defaultTextStyle: TextStyle(
             color: Color(0xFF5C7CF6),
             fontWeight: FontWeight.w600,
-            fontSize: 12,
+            fontSize: context.isPhone ? 12 : 22,
           ),
-          weekendTextStyle: const TextStyle(
+          weekendTextStyle: TextStyle(
             color: Color(0xFF2C2C2C),
             fontWeight: FontWeight.w600,
-            fontSize: 12,
+            fontSize: context.isPhone ? 12 : 22,
           ),
-          outsideTextStyle: const TextStyle(
+          outsideTextStyle: TextStyle(
             color: Color(0xFFB8B8B8),
             fontWeight: FontWeight.w500,
-            fontSize: 12,
+            fontSize: context.isPhone ? 12 : 22,
           ),
-          selectedTextStyle: const TextStyle(
+          selectedTextStyle: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.w800,
-            fontSize: 12,
+            fontSize: context.isPhone ? 12 : 22,
           ),
-          selectedDecoration: const BoxDecoration(
+          selectedDecoration: BoxDecoration(
             color: Color(0xFFE7FF57),
             shape: BoxShape.circle,
           ),
-          todayDecoration: const BoxDecoration(
+          todayDecoration: BoxDecoration(
             color: Colors.transparent,
             shape: BoxShape.circle,
           ),
-          todayTextStyle: const TextStyle(
+          todayTextStyle: TextStyle(
             color: Color(0xFF5C7CF6),
             fontWeight: FontWeight.w700,
-            fontSize: 12,
+            fontSize: context.isPhone ? 12 : 22,
           ),
           cellMargin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           cellPadding: EdgeInsets.zero,
@@ -571,8 +677,8 @@ class _ActivityCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: context.isPhone ? 44 : 60,
+            height: context.isPhone ? 44 : 60,
             decoration: const BoxDecoration(
               color: Color(0xFF6E89F5),
               shape: BoxShape.circle,
@@ -586,25 +692,25 @@ class _ActivityCard extends StatelessWidget {
               children: [
                 Text(
                   kcal,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Color(0xFFA1A1A1),
-                    fontSize: 11,
+                    fontSize: context.isPhone ? 11 : 21,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.black,
-                    fontSize: 22,
+                    fontSize: context.isPhone ? 22 : 32,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Color(0xFF8C79F7),
-                    fontSize: 14,
+                    fontSize: context.isPhone ? 14 : 24,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -616,14 +722,14 @@ class _ActivityCard extends StatelessWidget {
             children: [
               Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Icon(Icons.timelapse_rounded, color: Color(0xFF6E89F5), size: 16),
                   SizedBox(width: 4),
                   Text(
                     'Duration',
                     style: TextStyle(
                       color: Color(0xFF6E89F5),
-                      fontSize: 12,
+                      fontSize: context.isPhone ? 12 : 22,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -631,9 +737,9 @@ class _ActivityCard extends StatelessWidget {
               ),
               Text(
                 duration,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFF6E89F5),
-                  fontSize: 22,
+                  fontSize: context.isPhone ? 22 : 32,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -667,9 +773,9 @@ class _EmptyActivitiesCard extends StatelessWidget {
       ),
       child: Text(
         'No activities recorded for $dateText yet.',
-        style: const TextStyle(
+        style: TextStyle(
           color: Color(0xFF6E89F5),
-          fontSize: 15,
+          fontSize: context.isPhone ? 15 : 25,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -678,12 +784,24 @@ class _EmptyActivitiesCard extends StatelessWidget {
 }
 
 class _ChartCard extends StatelessWidget {
-  const _ChartCard();
+  const _ChartCard({
+    required this.points,
+  });
+
+  final List<_DailyKcalPoint> points;
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['Jan', 'Feb', 'Mar', 'Apr'];
-    const values = [0.48, 0.72, 0.38, 0.42];
+    final maxKcal = points.fold<int>(0, (max, point) {
+      return point.kcal > max ? point.kcal : max;
+    });
+    final effectiveMax = maxKcal <= 0 ? 40 : ((maxKcal + 19) ~/ 20) * 20;
+    final axisValues = [
+      effectiveMax,
+      (effectiveMax * 0.66).round(),
+      (effectiveMax * 0.33).round(),
+      0,
+    ];
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
@@ -694,11 +812,11 @@ class _ChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Steps',
+          Text(
+            'Kcal Burned',
             style: TextStyle(
               color: Color(0xFFE7FF57),
-              fontSize: 18,
+              fontSize: context.isPhone ? 18 : 28,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -706,27 +824,27 @@ class _ChartCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _AxisLabel('170'),
-                  SizedBox(height: 20),
-                  _AxisLabel('165'),
-                  SizedBox(height: 20),
-                  _AxisLabel('155'),
-                  SizedBox(height: 20),
-                  _AxisLabel('150'),
-                ],
+                children: List.generate(axisValues.length, (index) {
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == axisValues.length - 1 ? 0 : 20,
+                    ),
+                    child: _AxisLabel('${axisValues[index]}'),
+                  );
+                }),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   crossAxisAlignment: CrossAxisAlignment.end,
-                  children: List.generate(labels.length, (index) {
+                  children: List.generate(points.length, (index) {
+                    final point = points[index];
                     return _BarColumn(
-                      label: labels[index],
-                      value: values[index],
+                      label: _compactDateLabel(point.date),
+                      value: effectiveMax == 0 ? 0 : point.kcal / effectiveMax,
                     );
                   }),
                 ),
@@ -738,6 +856,11 @@ class _ChartCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static String _compactDateLabel(DateTime date) {
+    const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    return labels[date.weekday - 1];
   }
 }
 
@@ -773,8 +896,8 @@ class _BarColumn extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 16,
-          height: 128,
+          width: context.isPhone ? 16 : 26,
+          height: context.isPhone ? 128 : 200,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(999),
@@ -803,7 +926,11 @@ class _BarColumn extends StatelessWidget {
 }
 
 class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip();
+  const _SummaryStrip({
+    required this.summary,
+  });
+
+  final _DaySummary summary;
 
   @override
   Widget build(BuildContext context) {
@@ -813,32 +940,47 @@ class _SummaryStrip extends StatelessWidget {
         color: const Color(0xFF6E89F5),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Row(
+      child: Row(
         children: [
           Expanded(
             child: _SummaryItem(
-              title: 'Thu',
-              value: '14',
+              title: 'Day',
+              value: summary.weekday,
             ),
           ),
-          _SummaryDivider(),
+          const _SummaryDivider(),
           Expanded(
             child: _SummaryItem(
-              title: 'Steps',
-              value: '3,679',
+              title: 'Kcal',
+              value: '${summary.totalKcal}',
             ),
           ),
-          _SummaryDivider(),
+          const _SummaryDivider(),
           Expanded(
             child: _SummaryItem(
               title: 'Duration',
-              value: '1hr40m',
+              value: _formatSummaryDuration(summary.totalDurationSeconds),
               icon: Icons.watch_later_outlined,
             ),
           ),
         ],
       ),
     );
+  }
+
+  static String _formatSummaryDuration(int durationSeconds) {
+    final hours = durationSeconds ~/ 3600;
+    final minutes = (durationSeconds % 3600) ~/ 60;
+    if (hours == 0 && minutes == 0) {
+      return '${durationSeconds}s';
+    }
+    if (hours == 0) {
+      return '${minutes}m';
+    }
+    if (minutes == 0) {
+      return '${hours}h';
+    }
+    return '${hours}h ${minutes}m';
   }
 }
 
@@ -860,9 +1002,9 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 14,
+            fontSize: context.isPhone ? 14 : 24,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -870,9 +1012,9 @@ class _SummaryItem extends StatelessWidget {
         if (icon == null)
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: context.isPhone ? 20 : 30,
               fontWeight: FontWeight.w800,
             ),
           )
@@ -883,9 +1025,9 @@ class _SummaryItem extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: context.isPhone ? 16 : 26,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -902,10 +1044,32 @@ class _SummaryDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 1,
-      height: 44,
+      width: context.isPhone ? 1 : 2,
+      height: context.isPhone ? 44 : 60,
       margin: const EdgeInsets.symmetric(horizontal: 14),
       color: Colors.white54,
     );
   }
+}
+
+class _DailyKcalPoint {
+  const _DailyKcalPoint({
+    required this.date,
+    required this.kcal,
+  });
+
+  final DateTime date;
+  final int kcal;
+}
+
+class _DaySummary {
+  const _DaySummary({
+    required this.weekday,
+    required this.totalKcal,
+    required this.totalDurationSeconds,
+  });
+
+  final String weekday;
+  final int totalKcal;
+  final int totalDurationSeconds;
 }

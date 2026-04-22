@@ -5,16 +5,16 @@ import '../model/workout_models.dart';
 import '../route/app_routes.dart';
 import '../ui_view/program_detail_view.dart';
 
-class WorkoutDetailScreen extends StatelessWidget {
-  const WorkoutDetailScreen({super.key});
+class CyclingDetailScreen extends StatelessWidget {
+  const CyclingDetailScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final exerciseSequence = WorkoutPlan.program.rounds
+    final exerciseSequence = CyclingPlan.program.rounds
         .expand((round) => round.exercises)
         .toList(growable: false);
     return ProgramDetailView(
-      program: WorkoutPlan.program,
+      program: CyclingPlan.program,
       onExerciseTap: (exercise) {
         context.push(
           AppRoutes.workoutExercise,

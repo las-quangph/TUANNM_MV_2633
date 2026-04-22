@@ -10,8 +10,8 @@ import 'common/storage/user_profile_storage.dart';
 
 const _appOverlayStyle = SystemUiOverlayStyle(
   statusBarColor: Colors.transparent,
-  statusBarIconBrightness: Brightness.dark,
-  statusBarBrightness: Brightness.light,
+  statusBarIconBrightness: Brightness.light,
+  statusBarBrightness: Brightness.dark,
 );
 
 void main() async {
